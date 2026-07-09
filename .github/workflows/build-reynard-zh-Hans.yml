@@ -1,0 +1,144 @@
+name: Build Reynard zh-Hans
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build TrollStore TIPA
+    runs-on: macos-14
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: kit
+          fetch-depth: 1
+
+      - name: Checkout Reynard 0.6.0 source
+        uses: actions/checkout@v4
+        with:
+          repository: minh-ton/reynard-browser
+          ref: 0.6.0
+          path: source
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Apply Simplified Chinese patch
+        working-directory: source
+        run: |
+          set -euxo pipefail
+          PATCH_PATH="$GITHUB_WORKSPACE/kit/patches/reynard-zh-Hans-source.patch"
+          if [ -f "$PATCH_PATH" ]; then
+            git apply --check "$PATCH_PATH"
+            git apply "$PATCH_PATH"
+          else
+            echo "::error::$PATCH_PATH not found."
+            exit 1
+          fi
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Install build tools
+        run: |
+          set -euxo pipefail
+          brew update
+          brew install ldid
+          python3 --version
+          rustc --version
+          cargo --version
+          xcodebuild -version
+          ldid -v || true
+
+      - name: Download and patch Gecko
+        working-directory: source
+        run: |
+          set -euxo pipefail
+          ./tools/development/update-gecko.sh
+          ./tools/development/apply-patches.sh
+
+      - name: Build dependencies and Gecko
+        working-directory: source
+        run: |
+          set -euxo pipefail
+          ./tools/development/build-idevice.sh
+          ./tools/development/build-gecko.sh
+
+      - name: Prepare ad-hoc signing for TrollStore
+        working-directory: source
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          add_gecko = Path("browser/Scripts/AddGecko.sh")
+          text = add_gecko.read_text()
+          text = text.replace(
+              'SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:-Apple Development}}"',
+              'SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${EXPANDED_CODE_SIGN_IDENTITY_NAME:--}}"',
+          )
+          add_gecko.write_text(text)
+
+          create_ipa = Path("tools/release/create-ipa.sh")
+          text = create_ipa.read_text()
+          needle = 'ldid -S"$ROOT_DIR/browser/Helper/Entitlements/Reynard-Helper.private.entitlements" "Payload/Reynard.app/PlugIns/Reynard Helper.appex/Reynard Helper"\n'
+          extra = needle + 'if [ -f "Payload/Reynard.app/PlugIns/OpenIn.appex/OpenIn" ]; then\n\tldid -S "Payload/Reynard.app/PlugIns/OpenIn.appex/OpenIn"\nfi\n'
+          if needle in text and extra not in text:
+              text = text.replace(needle, extra)
+          create_ipa.write_text(text)
+          PY
+
+      - name: Archive iOS app
+        working-directory: source
+        run: |
+          set -euxo pipefail
+          ROOT_DIR="$PWD"
+          DIST_DIR="$ROOT_DIR/dist"
+          PROJECT_PATH="$ROOT_DIR/browser/Reynard.xcodeproj"
+          XCCONFIG_PATH="$ROOT_DIR/browser/Configuration/Reynard.xcconfig"
+
+          rm -rf "$DIST_DIR"
+          mkdir -p "$DIST_DIR"
+          cp "$XCCONFIG_PATH" "$DIST_DIR/Reynard.xcconfig"
+
+          BUILD_SHA="$(git rev-parse HEAD | cut -c1-7)"
+          sed -i '' "s/CURRENT_BUILD = .*/CURRENT_BUILD = $BUILD_SHA/" "$DIST_DIR/Reynard.xcconfig"
+
+          xcodebuild archive \
+            -scheme "Reynard" \
+            -archivePath "$DIST_DIR/Reynard.xcarchive" \
+            -project "$PROJECT_PATH" \
+            -sdk iphoneos \
+            -arch arm64 \
+            -configuration Release \
+            -xcconfig "$DIST_DIR/Reynard.xcconfig" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: Create IPA and TrollStore TIPA
+        working-directory: source
+        run: |
+          set -euxo pipefail
+          ./tools/release/create-ipa.sh
+          ls -lh dist
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Reynard-zh-Hans-iOS
+          if-no-files-found: error
+          path: |
+            source/dist/Reynard.ipa
+            source/dist/Reynard-TrollStore.tipa
+            source/dist/Reynard-Jailbroken.ipa
+            source/dist/Reynard.xcconfig
