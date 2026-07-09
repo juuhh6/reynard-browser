@@ -1300,7 +1300,7 @@ index 06aae13..7cb772b 100644
              },
              UIMenu(title: "", image: nil, identifier: nil, options: .displayInline, children: [
 -                UIAction(title: "Edit Bookmarks", image: UIImage(named: "reynard.pencil")) { [weak self] _ in
-+                UIAction(title: "编辑书签s", image: UIImage(named: "reynard.pencil")) { [weak self] _ in
++                UIAction(title: "编辑书签", image: UIImage(named: "reynard.pencil")) { [weak self] _ in
                      self?.setEditing(true, animated: true)
                  },
 -                UIAction(title: "New Folder", image: UIImage(named: "reynard.folder.badge.plus")) { [weak self] _ in
@@ -2514,6 +2514,15 @@ diff --git "a/browser/Reynard/Client/Interface/Library/Settings/Sections/General
 index 2e27638..816457c 100644
 --- "a/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Compatibility/CompatibilityPreferencesViewController.swift"
 +++ "b/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Compatibility/CompatibilityPreferencesViewController.swift"
+@@ -29,7 +29,7 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController
+     
+     init() {
+         super.init(style: .insetGrouped)
+-        title = "Compatibility"
++        title = "兼容性"
+     }
+     
+     required init?(coder: NSCoder) {
 @@ -73,13 +73,13 @@ final class CompatibilityPreferencesViewController: SettingsTableViewController
          switch row {
          case .useAndroidUserAgent:
@@ -2629,7 +2638,8 @@ index 6a0e17f..4110f56 100644
 -            return SettingsViewUtils.disclosureCell(title: "Appearance")
 +            return SettingsViewUtils.disclosureCell(title: "外观")
          case .compatibility:
-             return SettingsViewUtils.disclosureCell(title: "Compatibility")
+-            return SettingsViewUtils.disclosureCell(title: "Compatibility")
++            return SettingsViewUtils.disclosureCell(title: "兼容性")
          }
 diff --git "a/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Homepage/HomepageOpeningScreen/HomepageOpeningScreen.swift" "b/browser/Reynard/Client/Interface/Library/Settings/Sections/General/Homepage/HomepageOpeningScreen/HomepageOpeningScreen.swift"
 index c05f72e..6eb081b 100644
