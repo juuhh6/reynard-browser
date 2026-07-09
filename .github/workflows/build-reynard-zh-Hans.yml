@@ -9,7 +9,7 @@ permissions:
 jobs:
   build:
     name: Build TrollStore TIPA
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 360
 
     steps:
@@ -45,6 +45,11 @@ jobs:
         with:
           targets: aarch64-apple-ios
 
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Install build tools
         run: |
           set -euxo pipefail
@@ -54,6 +59,7 @@ jobs:
           rustc --version
           cargo --version
           xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
           ldid -v || true
 
       - name: Download and patch Gecko
