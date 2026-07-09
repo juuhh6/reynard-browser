@@ -60,6 +60,8 @@ jobs:
           python3 --version
           rustc --version
           cargo --version
+          cargo install cbindgen --locked
+          cbindgen --version
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
           "$LLVM_PREFIX/bin/clang" --version
