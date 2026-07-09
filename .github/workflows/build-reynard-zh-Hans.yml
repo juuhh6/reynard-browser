@@ -91,9 +91,16 @@ jobs:
           script = Path("tools/development/build-gecko.sh")
           text = script.read_text()
           needle = '\techo "ac_add_options --disable-tests"\n'
-          insert = needle + '\techo "ac_add_options --enable-linker=lld"\n'
-          if "--enable-linker=lld" not in text:
-              text = text.replace(needle, insert)
+          extra_options = [
+              "--enable-linker=lld",
+              "--without-wasm-sandboxed-libraries",
+          ]
+          insert = needle + "".join(
+              f'\techo "ac_add_options {option}"\n'
+              for option in extra_options
+              if option not in text
+          )
+          text = text.replace(needle, insert)
           script.write_text(text)
           PY
           command -v clang
