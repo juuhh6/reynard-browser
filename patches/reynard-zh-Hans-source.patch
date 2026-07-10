@@ -1327,6 +1327,20 @@ index 06aae13..7cb772b 100644
              image: UIImage(named: "reynard.arrow.up.arrow.down"),
              identifier: nil,
              options: [],
+@@ -525,7 +525,12 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
+     private func reloadFolder() {
+         let snapshot = store.contents(of: folderID)
+         sections = makeBookmarkSections(from: snapshot.items)
+-        title = snapshot.parent.title
++        if isRoot {
++            title = "书签"
++            tabBarItem.title = "书签"
++        } else {
++            title = snapshot.parent.title
++        }
+         updateEmptyState()
+         tableView.reloadData()
+     }
 @@ -537,7 +537,7 @@ final class BookmarksViewController: UIViewController, UITableViewDataSource, UI
      private func makeBookmarkSections(from newItems: [BookmarkContentSnapshot]) -> [(title: String, items: [BookmarkContentSnapshot])] {
          guard Prefs.BookmarkSettings.placeFoldersOnTop else {
